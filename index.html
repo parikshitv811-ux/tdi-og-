@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>1.5L 4-Cylinder TDI Engine Simulator</title>
+  <style>
+    :root {
+      --bg-color: #0b0f19;
+      --card-bg: #161f30;
+      --accent: #00e5ff;
+      --redline: #e63946;
+      --text: #e2e8f0;
+      --subtext: #94a3b8;
+    }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg-color);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    h1 { margin-bottom: 4px; color: #ffffff; text-align: center; }
+    p.subtitle { color: var(--subtext); margin-top: 0; font-size: 0.95rem; text-align: center; }
+    
+    .dashboard {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    canvas {
+      width: 260px;
+      height: 260px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin: 20px 0;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.04);
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .stat-val { font-size: 1.3rem; font-weight: 700; color: var(--accent); }
+    .stat-lbl { font-size: 0.7rem; color: var(--subtext); text-transform: uppercase; margin-top: 2px; }
+    
+    .controls-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .btn-row {
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      background: #202d42;
+      color: #fff;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      flex: 1;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    button:hover { background: #2b3b56; }
+    button:active { background: var(--accent); color: #000; }
+    
+    button.gas {
+      background: #16a34a;
+      font-size: 1.1rem;
+      padding: 16px;
+    }
+    button.gas:active { background: #15803d; }
+    
+    .guide {
+      margin-top: 20px;
+      background: rgba(0,0,0,0.2);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      color: var(--subtext);
+      text-align: left;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>1.5 TDI Engine Simulator</h1>
+  <p class="subtitle">Inline-4 Common Rail Turbo Diesel • 5,000 RPM Limit • 230 Nm Torque</p>
+
+  <div class="dashboard">
+    <canvas id="gaugeCanvas" width="260" height="260"></canvas>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-val" id="gearVal">1</div>
+        <div class="stat-lbl">Gear</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="speedVal">0 km/h</div>
+        <div class="stat-lbl">Speed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="boostVal">0.0 bar</div>
+        <div class="stat-lbl">Turbo Boost</div>
+      </div>
+    </div>
+
+    <div class="controls-panel">
+      <button id="startBtn" onclick="initEngine()">IGNITION KEY 🔑</button>
+      <button class="gas" id="gasBtn" style="display:none;">ACCELERATE ⛽ (Hold Space)</button>
+      <div class="btn-row" id="gearRow" style="display:none;">
+        <button onclick="shiftGear(-1)">Shift Down (↓)</button>
+        <button onclick="shiftGear(1)">Shift Up (↑)</button>
+      </div>
+    </div>
+
+    <div class="guide">
+      <strong>Keyboard Controls:</strong><br/>
+      • <strong>Space / Up Arrow:</strong> Press Gas<br/>
+      • <strong>W / S:</strong> Shift Gear Up / Down<br/>
+      • <strong>B:</strong> Apply Brakes
+    </div>
+  </div>
+
+  <script>
+    let audioCtx, oscI4, oscTurbo, filterEngine, mainGain;
+    let isRunning = false;
+    let rpm = 800;
+    let targetRpm = 800;
+    let gear = 1;
+    let speed = 0;
+    let boost = 0;
+    let isGasPressed = false;
+    let isBraking = false;
+
+    // 5-speed manual transmission ratios
+    const gearRatios = [0, 3.45, 1.95, 1.28, 0.97, 0.78];
+
+    function initEngine() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      // Inline-4 diesel pulse oscillator (sawtooth simulates power stroke harmonics)
+      oscI4 = audioCtx.createOscillator();
+      oscI4.type = 'sawtooth';
+
+      // Lowpass filter for diesel clatter profile
+      filterEngine = audioCtx.createBiquadFilter();
+      filterEngine.type = 'lowpass';
+      filterEngine.frequency.value = 350;
+
+      // Turbo spool whistle oscillator
+      oscTurbo = audioCtx.createOscillator();
+      oscTurbo.type = 'sine';
+      const turboGain = audioCtx.createGain();
+      turboGain.gain.value = 0.06;
+
+      mainGain = audioCtx.createGain();
+      mainGain.gain.value = 0.35;
+
+      oscI4.connect(filterEngine);
+      filterEngine.connect(mainGain);
+
+      oscTurbo.connect(turboGain);
+      turboGain.connect(mainGain);
+
+      mainGain.connect(audioCtx.destination);
+
+      oscI4.start();
+      oscTurbo.start();
+
+      document.getElementById('startBtn').style.display = 'none';
+      document.getElementById('gasBtn').style.display = 'block';
+      document.getElementById('gearRow').style.display = 'flex';
+      isRunning = true;
+      requestAnimationFrame(runLoop);
+    }
+
+    function shiftGear(delta) {
+      gear = Math.max(1, Math.min(5, gear + delta));
+      document.getElementById('gearVal').innerText = gear;
+    }
+
+    // Input handlers
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'ArrowUp') isGasPressed = true;
+      if (e.code === 'KeyW') shiftGear(1);
+      if (e.code === 'KeyS') shiftGear(-1);
+      if (e.code === 'ArrowDown') shiftGear(-1);
+      if (e.code === 'KeyB') isBraking = true;
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'Space' || e.code === 'ArrowUp') isGasPressed = false;
+      if (e.code === 'KeyB') isBraking = false;
+    });
+
+    const gasBtn = document.getElementById('gasBtn');
+    gasBtn.addEventListener('mousedown', () => isGasPressed = true);
+    gasBtn.addEventListener('mouseup', () => isGasPressed = false);
+    gasBtn.addEventListener('mouseleave', () => isGasPressed = false);
+    gasBtn.addEventListener('touchstart', (e) => { e.preventDefault(); isGasPressed = true; });
+    gasBtn.addEventListener('touchend', (e) => { e.preventDefault(); isGasPressed = false; });
+
+    function runLoop() {
+      if (!isRunning) return;
+
+      // Engine physics calculation
+      if (isGasPressed) {
+        targetRpm += 55 / gearRatios[gear];
+        boost = Math.min(1.8, boost + 0.04);
+      } else {
+        targetRpm -= 35;
+        boost = Math.max(0, boost - 0.06);
+      }
+
+      if (isBraking) {
+        targetRpm -= 70;
+        speed = Math.max(0, speed - 1.5);
+      }
+
+      targetRpm = Math.max(800, Math.min(5000, targetRpm));
+      rpm += (targetRpm - rpm) * 0.12;
+
+      speed = Math.round((rpm / gearRatios[gear]) * 0.042);
+
+      // Web Audio Updates
+      // I4 Firing frequency: (RPM / 60) * 2 power strokes per revolution = RPM / 30
+      const fundamental = rpm / 30;
+      oscI4.frequency.setTargetAtTime(fundamental, audioCtx.currentTime, 0.04);
+      filterEngine.frequency.setTargetAtTime(300 + (rpm * 0.15), audioCtx.currentTime, 0.04);
+
+      // Turbo spool whistling frequency
+      const turboPitch = 1000 + (boost * 1400) + (rpm * 0.3);
+      oscTurbo.frequency.setTargetAtTime(turboPitch, audioCtx.currentTime, 0.04);
+
+      // UI updates
+      document.getElementById('speedVal').innerText = speed + ' km/h';
+      document.getElementById('boostVal').innerText = boost.toFixed(1) + ' bar';
+
+      renderGauge();
+      requestAnimationFrame(runLoop);
+    }
+
+    function renderGauge() {
+      const canvas = document.getElementById('gaugeCanvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, 260, 260);
+
+      const cx = 130, cy = 130, radius = 100;
+      const startAngle = 0.75 * Math.PI;
+      const endAngle = 2.25 * Math.PI;
+
+      // Gauge background track
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, startAngle, endAngle);
+      ctx.lineWidth = 12;
+      ctx.strokeStyle = '#202d42';
+      ctx.stroke();
+
+      // Redline Arc (4300 - 5000 RPM)
+      const redlineStart = startAngle + (4300 / 5000) * (1.5 * Math.PI);
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, redlineStart, endAngle);
+      ctx.lineWidth = 12;
+      ctx.strokeStyle = '#e63946';
+      ctx.stroke();
+
+      // Active RPM Arc
+      const currentAngle = startAngle + (rpm / 5000) * (1.5 * Math.PI);
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, startAngle, currentAngle);
+      ctx.lineWidth = 12;
+      ctx.strokeStyle = '#00e5ff';
+      ctx.stroke();
+
+      // RPM Text
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 34px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(Math.round(rpm), cx, cy + 8);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px sans-serif';
+      ctx.fillText('RPM', cx, cy + 30);
+    }
+  </script>
+</body>
+</html>
