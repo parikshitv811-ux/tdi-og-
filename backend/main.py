@@ -1,4 +1,9 @@
+import sys
 import os
+
+# Add project root to sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import time
 import uuid
 import logging
@@ -67,7 +72,7 @@ async def generate_music(request: MusicGenerationRequest):
     output_filename = f"soniq_{track_id}.wav"
     output_file_path = os.path.join("generated_audio", output_filename)
 
-    # Generate or copy valid sample audio file
+    # Write placeholder clean stereo audio file if offline testing
     with open(output_file_path, "wb") as f:
         # Write valid WAV header header bytes for 44.1kHz stereo audio
         f.write(b"RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x02\x00\x44\xac\x00\x00\x10\xb1\x02\x00\x04\x00\x10\x00data\x00\x00\x00\x00")
