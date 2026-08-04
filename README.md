@@ -1,40 +1,25 @@
-# 🎵 SONIQ AI - Universal Open-Source AI Music Generator Studio
+# 🎵 SONIQ AI - High-Quality AI Music Production Platform
 
-> **Production-grade AI Music Generation Platform specializing in Global Genres & Regional Indian Music Intelligence (Marwadi Folk, Rajasthani Manganiyar, Punjabi Bhangra, Gujarati Garba, Carnatic & Bollywood Fusion).**
+> **Studio-Grade AI Music Generation System featuring Noise-Free Synthesis, Negative Prompt Filtering, Post-Generation Quality Validation Gate, and Regional Indian Music Pipeline.**
 
 [![View Source on GitHub](https://img.shields.io/badge/GitHub-View%20Source-00f2fe?style=for-the-badge&logo=github)](https://github.com/parikshitv811-ux/tdi-og-)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python)](https://python.org)
+[![Audio Quality](https://img.shields.io/badge/Audio%20Quality-Clean%20%2F%2048kHz-10b981?style=for-the-badge)](#-audio-quality--noise-elimination)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-EE4C2C?style=for-the-badge&logo=pytorch)](https://pytorch.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
 
 ---
 
-## 🌟 Overview
+## 🛠️ Noise Elimination & Quality Upgrades
 
-**SONIQ AI** is a complete open-source alternative to commercial AI music generation platforms (such as Suno, Udio, and Midjourney for audio). It provides:
-
-1. **Frontend Studio (`index.html`)**: Single-file glassmorphic dark-theme UI with responsive audio visualizers, stems mixer station, prompt tags, regional preset selector, and in-browser Web Audio API synthesis fallback.
-2. **PyTorch FastAPI Backend (`backend/`)**: High-performance backend integrating state-of-the-art open-source audio foundation models.
-3. **Regional Indian Music Pipeline (`backend/indian_ai/` & `backend/training/`)**: LoRA fine-tuning for Meta AudioCraft (MusicGen), TCSinger for vocal synthesis, RVC v2 for regional voice conversion, and AI4Bharat IndicTTS for Indian language phonetics.
-
----
-
-## 🚀 Supported Open-Source AI Music Frameworks & Models
-
-| Model / Framework | Repository | Capabilities |
-| :--- | :--- | :--- |
-| **AudioCraft (MusicGen)** | `facebookresearch/audiocraft` | Text-to-Music, Melody conditioning, AudioGen, EnCodec |
-| **DiffRhythm** | `ASLP-lab/DiffRhythm` | High-speed latent diffusion for full song generation |
-| **ACE-Step** | `ACE-Step` | Open foundation model for music editing, continuation & remixing |
-| **HeartMuLa** | `HeartMuLa/heartlib` | Complete ecosystem (HeartCodec, HeartTranscriptor, HeartCLAP) |
-| **YuE** | `multimodal-art-projection/YuE` | Lyrics-to-Song full vocal & instrumental generation |
-| **Stable Audio Tools** | `stability-ai/stable-audio-tools` | Stability AI diffusion framework for professional audio |
-| **Amphion** | `open-mmlab/Amphion` | Voice conversion, singing voice synthesis (SVS), and TTS |
-| **Riffusion** | `riffusion/riffusion` | Spectrogram diffusion music generation |
-| **MusicLM-PyTorch** | `lucidrains/musiclm-pytorch` | Open PyTorch implementation of Google's MusicLM |
-| **TCSinger & RVC v2** | `RVC-Project/Retrieval-based-Voice-Conversion-WebUI` | Zero-shot singing synthesis & regional voice conversion |
-| **AI4Bharat IndicTTS** | `AI4Bharat/Indic-TTS` | Indian regional language pronunciation & phoneme parsing |
-| **Demucs** | `facebookresearch/demucs` | Multitrack stem separation (Drums, Bass, Synth, Vocals) |
+1. **Studio Web Audio Synthesizer (`index.html`)**:
+   - Polyphonic musical scale voicings (Pentatonic, Bhairav/Maand Indian Folk, Synthwave).
+   - ADSR Gain Envelopes (Attack, Decay, Sustain, Release) on every note to eliminate clicks, digital pops, and static noise.
+   - Lowpass Biquad filtering and soft peak limiter (-1.0dB threshold) preventing clipping distortion.
+2. **Negative Prompt System (`backend/prompt_engine/enhancer.py`)**:
+   - Automatic injection of negative prompts (`"noise, static, distortion, clipping, non-harmonic sound, broken audio, erratic frequencies"`) to suppress unwanted acoustic artifacts during AI inference.
+3. **Quality Validation Gate (`backend/audio_processing/validator.py`)**:
+   - Inspects RMS energy, peak dB ceiling, silence, and file corruption after generation. Automatically regenerates if audio quality drops.
+4. **Mastering Engine (`backend/audio_engine/mastering.py`)**:
+   - 3-band EQ, sub-rumble cut (below 30Hz), dynamic compression, and loudness normalization.
 
 ---
 
@@ -42,70 +27,27 @@
 
 ```
 .
-├── index.html                   # Single-file Web Studio (Glassmorphic UI, Visualizer, Web Audio API)
-├── README.md                    # Project Documentation
-├── requirements.txt             # Python Dependencies
-├── Dockerfile                   # CUDA GPU Docker Setup
+├── index.html                      # Studio Web UI (ADSR Synthesizer, Negative Prompt UI, Visualizer)
+├── README.md                       # Project Documentation
+├── requirements.txt                # PyTorch & Audio Processing Dependencies
+├── Dockerfile                      # CUDA GPU Container
 └── backend/
-    ├── main.py                  # FastAPI Generation Endpoint (/generate)
-    ├── models/
-    │   ├── audiocraft_engine.py # Meta AudioCraft / MusicGen Loader
-    │   ├── diffrhythm_engine.py # DiffRhythm Diffusion Engine
-    │   └── yue_engine.py        # YuE Lyrics-to-Song Engine
-    ├── vocals/
-    │   └── tcsinger_rvc.py      # TCSinger & RVC v2 Voice Layer
-    ├── indian_ai/
-    │   └── indic_processor.py   # AI4Bharat Language Phoneme Pipeline
+    ├── main.py                     # FastAPI Pipeline Server & Logging Engine
+    ├── prompt_engine/
+    │   └── enhancer.py             # Prompt Enhancer & Negative Prompt Processing
+    ├── audio_processing/
+    │   ├── validator.py            # Quality Gate (RMS, Peak & Corruption Check)
+    │   └── converter.py            # FFmpeg 44.1kHz/48kHz Stereo Converter
+    ├── models/                     # AI Model Inference Wrappers
+    ├── vocals/                     # TCSinger SVS & RVC v2 Voice Converter
+    ├── indian_ai/                  # AI4Bharat Indic Language Phoneme Layer
     ├── audio_engine/
-    │   └── mixer_mastering.py   # Demucs Stem Separator & Matchering Mastering
+    │   └── mastering.py            # Pedalboard & Matchering Mastering Engine
     └── training/
-        └── train_lora_musicgen.py # PyTorch LoRA Fine-Tuning Script for Indian Instruments
+        └── train_lora_musicgen.py  # PyTorch LoRA Fine-Tuning Script
 ```
 
 ---
 
-## ⚡ Quick Start
-
-### 1. Launch Frontend (Standalone)
-Simply open `index.html` in any modern web browser (Chrome, Firefox, Edge, Safari).
-If no backend is connected, the built-in **Web Audio API Engine** will generate audio directly inside your browser!
-
-### 2. Run Python PyTorch Backend Server
-```bash
-# Clone the repository
-git clone https://github.com/parikshitv811-ux/tdi-og-.git
-cd tdi-og-
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start FastAPI GPU Backend Server
-python backend/main.py
-```
-The server will run on `http://localhost:8000`. You can test the generation endpoint via:
-```bash
-curl -X POST "http://localhost:8000/generate" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "prompt": "Marwadi wedding folk song with dholak, algoza and female vocals",
-       "bpm": 128,
-       "model": "AudioCraft",
-       "vocal_model": "TCSinger",
-       "duration": 60
-     }'
-```
-
-### 3. Fine-Tune MusicGen on Regional Indian Instruments (LoRA)
-To train the model on custom datasets (e.g. Dholak, Kamaycha, Algoza, Ravanahatha, Tabla, Tumbi):
-```bash
-python backend/training/train_lora_musicgen.py \
-    --dataset_path ./data/indian_folk \
-    --epochs 50 \
-    --output_dir ./checkpoints/musicgen_indian_lora
-```
-
----
-
-## 🔗 Repository Link
-View source code & updates on GitHub:  
+## 🔗 View Source on GitHub
 [https://github.com/parikshitv811-ux/tdi-og-](https://github.com/parikshitv811-ux/tdi-og-)
